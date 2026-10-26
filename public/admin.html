@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Администрирование</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Администрирование</h1>
+    <nav><a href="/">Каталог</a></nav>
+  </header>
+
+  <main>
+    <section>
+      <label for="token">Access token администратора</label>
+      <input id="token" type="password" autocomplete="off">
+    </section>
+
+    <section>
+      <h2>Добавить ресурс</h2>
+      <form id="resourceForm">
+        <label for="name">Название</label>
+        <input id="name" required maxlength="200">
+
+        <label for="description">Описание</label>
+        <textarea id="description"></textarea>
+
+        <label for="location">Местоположение</label>
+        <input id="location">
+
+        <button type="submit">Добавить</button>
+      </form>
+      <p id="result" role="status"></p>
+    </section>
+
+    <section>
+      <h2>Журнал аудита</h2>
+      <button id="loadAudit">Загрузить аудит</button>
+      <pre id="audit"></pre>
+    </section>
+  </main>
+
+  <script>
+    const token = document.querySelector('#token');
+    const result = document.querySelector('#result');
+    const audit = document.querySelector('#audit');
+
+    document.querySelector('#resourceForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      result.textContent = '';
+
+      try {
+        const response = await fetch('/api/admin/resources', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token.value.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: document.querySelector('#name').value,
+            description: document.querySelector('#description').value,
+            location: document.querySelector('#location').value
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Ошибка создания ресурса');
+        }
+
+        result.textContent = `Ресурс создан. ID: ${data.resource.id}`;
+        event.target.reset();
+      } catch (error) {
+        result.textContent = error.message;
+      }
+    });
+
+    document.querySelector('#loadAudit').addEventListener('click', async () => {
+      audit.textContent = 'Загрузка...';
+
+      try {
+        const response = await fetch('/api/admin/audit', {
+          headers: { Authorization: `Bearer ${token.value.trim()}` }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Ошибка чтения аудита');
+        }
+
+        audit.textContent = JSON.stringify(data.events, null, 2);
+      } catch (error) {
+        audit.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>

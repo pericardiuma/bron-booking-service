@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Бронирование</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, sans-serif;
+      color: #202938;
+      background: #f3f5f9;
+    }
+    main { max-width: 1100px; margin: auto; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0; font-size: 28px; }
+    h2 { margin-top: 0; }
+    section {
+      margin-bottom: 24px;
+      padding: 24px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px #00000008;
+    }
+    label { display: block; margin: 14px 0 7px; font-weight: 600; }
+    input, select, textarea {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font: inherit;
+    }
+    textarea { min-height: 85px; resize: vertical; }
+    button {
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .secondary { background: #e2e8f0; color: #202938; }
+    .danger { background: #dc2626; }
+    .resource, .booking, .admin-item {
+      margin-top: 12px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+    .resource h3, .booking h3 { margin: 0 0 8px; }
+    .muted { color: #64748b; line-height: 1.5; }
+    .status { font-weight: 700; }
+    .active { color: #15803d; }
+    .cancelled { color: #b91c1c; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .hidden { display: none !important; }
+    .message { overflow-wrap: anywhere; line-height: 1.5; }
+    @media (max-width: 650px) {
+      body { padding: 12px; }
+      section { padding: 16px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Бронирование</h1>
+      <p class="muted">Управление бронированиями</p>
+    </div>
+    <div class="actions">
+      <span id="roleLabel" class="muted"></span>
+      <button id="logoutButton" class="secondary" type="button">Выйти</button>
+    </div>
+  </header>
+
+  <section>
+    <h2>Доступные ресурсы</h2>
+    <button id="loadResources" class="secondary" type="button">Обновить список</button>
+    <div id="message" class="message" role="status" aria-live="polite"></div>
+    <div id="resources"></div>
+  </section>
+
+  <section>
+    <h2>Создать бронирование</h2>
+    <form id="bookingForm">
+      <label for="resourceId">Ресурс</label>
+      <select id="resourceId" name="resourceId" required></select>
+
+      <div class="grid">
+        <div>
+          <label for="startAt">Начало (Москва)</label>
+          <input type="datetime-local" id="startAt" step="1800" required>
+        </div>
+        <div>
+          <label for="endAt">Окончание (Москва)</label>
+          <input type="datetime-local" id="endAt" step="1800" required>
+        </div>
+      </div>
+
+      <label for="purpose">Причина бронирования</label>
+      <textarea id="purpose" minlength="5" maxlength="300" required></textarea>
+      <div class="actions">
+        <button type="submit">Забронировать</button>
+      </div>
+      <p id="bookingMessage" class="message" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section>
+    <h2>Мои бронирования</h2>
+    <label for="myStatusFilter">Фильтр по статусу</label>
+    <select id="myStatusFilter">
+      <option value="all">Все бронирования</option>
+      <option value="active">Активные</option>
+      <option value="cancelled">Отменённые</option>
+    </select>
+    <div class="actions">
+      <button id="refreshMyBookings" class="secondary" type="button">Обновить бронирования</button>
+    </div>
+    <p id="myBookingsMessage" class="message" role="status" aria-live="polite"></p>
+    <div id="myBookings"></div>
+  </section>
+
+  <section id="adminPanel" class="hidden">
+    <h2>Панель администратора</h2>
+
+    <h3>Добавить ресурс</h3>
+    <form id="resourceForm">
+      <label for="resourceName">Название</label>
+      <input id="resourceName" maxlength="200" required>
+      <label for="resourceDescription">Описание</label>
+      <textarea id="resourceDescription" maxlength="1000"></textarea>
+      <label for="resourceLocation">Местоположение</label>
+      <input id="resourceLocation" maxlength="300">
+      <div class="actions"><button type="submit">Добавить ресурс</button></div>
+      <p id="resourceMessage" class="message" role="status"></p>
+    </form>
+
+    <h3>Управление ресурсами</h3>
+    <button id="refreshAdminResources" class="secondary" type="button">Обновить ресурсы</button>
+    <div id="adminResources"></div>
+
+    <h3>Все бронирования</h3>
+    <div class="grid">
+      <div>
+        <label for="adminStatusFilter">Статус</label>
+        <select id="adminStatusFilter">
+          <option value="">Все</option>
+          <option value="active">Активные</option>
+          <option value="cancelled">Отменённые</option>
+        </select>
+      </div>
+      <div>
+        <label for="adminResourceFilter">Ресурс</label>
+        <select id="adminResourceFilter"><option value="">Все ресурсы</option></select>
+      </div>
+      <div>
+        <label for="adminDateFrom">Дата с</label>
+        <input id="adminDateFrom" type="date">
+      </div>
+      <div>
+        <label for="adminDateTo">Дата по</label>
+        <input id="adminDateTo" type="date">
+      </div>
+    </div>
+    <div class="actions"><button id="refreshAdminBookings" type="button">Применить фильтры</button></div>
+    <p id="adminBookingsMessage" class="message" role="status"></p>
+    <div id="adminBookings"></div>
+
+    <h3>Журнал аудита</h3>
+    <button id="refreshAudit" class="secondary" type="button">Обновить аудит</button>
+    <p id="auditMessage" class="message" role="status"></p>
+    <div id="auditEvents"></div>
+  </section>
+</main>
+<script src="/app.js" defer></script>
+</body>
+</html>

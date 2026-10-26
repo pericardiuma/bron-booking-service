@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Мои бронирования</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Мои бронирования</h1>
+    <nav><a href="/">Вернуться в каталог</a></nav>
+  </header>
+  <main>
+    <section>
+      <label for="token">Access token</label>
+      <input id="token" type="password" autocomplete="off">
+      <button id="load">Загрузить бронирования</button>
+      <div id="list"></div>
+    </section>
+  </main>
+
+  <script>
+    const token = document.querySelector('#token');
+    const list = document.querySelector('#list');
+
+    document.querySelector('#load').addEventListener('click', async () => {
+      list.textContent = 'Загрузка...';
+
+      try {
+        const response = await fetch('/api/bookings/my', {
+          headers: {
+            Authorization: `Bearer ${token.value.trim()}`
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Не удалось загрузить записи');
+        }
+
+        list.replaceChildren();
+
+        if (!data.bookings.length) {
+          list.textContent = 'Бронирований пока нет';
+          return;
+        }
+
+        for (const booking of data.bookings) {
+          const card = document.createElement('section');
+          const title = document.createElement('h3');
+          title.textContent =
+            `${booking.resource_name} — №${booking.id}`;
+
+          const details = document.createElement('p');
+          details.textContent =
+            `${new Date(booking.start_at).toLocaleString('ru-RU')} — ` +
+            `${new Date(booking.end_at).toLocaleString('ru-RU')} · ` +
+            `${booking.status}`;
+
+          card.append(title, details);
+
+          if (booking.status === 'active' &&
+              new Date(booking.start_at) > new Date()) {
+            const button = document.createElement('button');
+            button.textContent = 'Отменить';
+
+            button.addEventListener('click', async () => {
+              const result = await fetch(
+                `/api/bookings/${booking.id}/cancel`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${token.value.trim()}`
+                  }
+                }
+              );
+
+              const body = await result.json();
+
+              if (!result.ok) {
+                alert(body.message || 'Не удалось отменить');
+                return;
+              }
+
+              alert('Бронирование отменено');
+              document.querySelector('#load').click();
+            });
+
+            card.append(button);
+          }
+
+          list.append(card);
+        }
+      } catch (error) {
+        list.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>
