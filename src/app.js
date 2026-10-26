@@ -1,6 +1,6 @@
 
 require('dotenv').config();
-const logger = require('./logger);
+const logger = require('./logger');
 const express = require('express');
 const path = require('path');
 const { randomUUID } = require('crypto');
