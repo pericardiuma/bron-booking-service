@@ -4,7 +4,7 @@ const logger = require('./logger');
 const express = require('express');
 const path = require('path');
 const { randomUUID } = require('crypto');
-const db = require('./db');
+const db = require('./db')
 
 const authRouter = require('./routes/auth');
 const resourcesRouter = require('./routes/resources');
@@ -99,5 +99,3 @@ const port = Number(process.env.PORT) || 3000;
 app.listen(port, () => {
   console.log(`Сервер запущен: http://localhost:${port}`);
 });
-
-asdfgh
